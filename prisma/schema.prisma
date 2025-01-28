@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Evento (ej: "Fiesta de Danza 2024")
+model Event {
+  id               String   @id @default(uuid())
+  title            String
+  description      String?
+  date             DateTime // Fecha y hora del evento
+  location         String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  tickets          Ticket[] // Tickets asociados al evento
+  capacity         Int // Máximo de tickets disponibles
+  availableTickets Int // Tickets disponibles (se actualiza dinámicamente)
+}
+
+// Ticket individual (ej: "Ticket VIP para Juan Pérez")
+model Ticket {
+  id         String       @id @default(uuid())
+  eventId    String
+  event      Event        @relation(fields: [eventId], references: [id])
+  userId     String? // Si hay usuarios registrados (opcional)
+  user       User?        @relation(fields: [userId], references: [id])
+  createdAt  DateTime     @default(now())
+  status     TicketStatus @default(ACTIVE) // ACTIVE, USED, CANCELLED
+  qrCodeData String       @unique // URL única generada por el servidor (ej: https://tudominio.com/validate/1234-5678-9012)
+  isVerified Boolean      @default(false) // Si el QR ya fue escaneado
+  orderId    String? // Si hay compras agrupadas en órdenes
+  order      Order?       @relation(fields: [orderId], references: [id])
+
+  // Índices para búsquedas rápidas
+  @@index([eventId])
+  @@index([userId])
+  @@index([qrCodeData])
+}
+
+// Usuario (si la app requiere autenticación)
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  createdAt    DateTime @default(now())
+  tickets      Ticket[]
+  authProvider String? // Ej: "google", "email"
+
+  // Relación con Order
+  orders Order[]
+
+  // Índices para búsquedas rápidas
+  @@index([email])
+}
+
+// Orden de compra (si se venden tickets en grupos)
+model Order {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  tickets     Ticket[]
+  totalAmount Float
+  status      OrderStatus @default(PENDING) // PENDING, PAID, CANCELLED
+  createdAt   DateTime    @default(now())
+}
+
+enum TicketStatus {
+  ACTIVE
+  USED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
