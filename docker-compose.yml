@@ -1,0 +1,11 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: event-app
+    env_file:
+      - .env # Load environment variables from the .env file
+    ports:
+      - '5000:5000'
+    command: node dist/main.js
