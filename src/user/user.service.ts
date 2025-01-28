@@ -26,8 +26,21 @@ export class UserService {
     }
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async findAll() {
+    try {
+      const users = await this.prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      });
+
+      return users;
+    } catch (error) {
+      this.logger.error(error);
+      throw new InternalServerErrorException('Error fetching users');
+    }
   }
 
   findOne(id: string) {

@@ -1,0 +1,86 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main # Cambia esto si usas otra rama principal
+  pull_request:
+    branches:
+      - main # Cambia esto si usas otra rama principal
+  workflow_dispatch: # Permite ejecutar el flujo manualmente desde GitHub Actions
+
+jobs:
+  run-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - '5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@latest-10
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm dlx prisma generate
+
+      - name: Run Database Migrations
+        run: pnpm dlx prisma migrate deploy
+
+      - name: Run Integration Tests
+        run: pnpm test
+
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Verificar el código desde el repositorio
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Iniciar sesión en Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Configurar acceso al archivo .env (opcional si lo necesitas en tu imagen)
+      - name: Copy .env file
+        run: cp .env.example .env
+
+      # Construir y etiquetar la imagen Docker
+      - name: Build Docker Image
+        run: |
+          docker build \
+          --build-arg NODE_ENV=production \
+          -t ${{ secrets.DOCKER_USERNAME }}/event-app:latest .
+
+      # Publicar la imagen en Docker Hub
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/event-app:latest
