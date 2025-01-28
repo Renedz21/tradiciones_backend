@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { EventModule } from './event/event.module';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
+import { UserModule } from './user/user.module';
+import { OrderModule } from './order/order.module';
+import { TicketModule } from './ticket/ticket.module';
 
 @Module({
   imports: [
@@ -12,6 +15,9 @@ import { ConfigModule } from '@nestjs/config';
     }),
     EventModule,
     DatabaseModule,
+    UserModule,
+    OrderModule,
+    TicketModule,
   ],
   controllers: [],
   providers: [],
